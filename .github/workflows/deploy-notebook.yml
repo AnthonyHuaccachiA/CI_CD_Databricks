@@ -41,6 +41,7 @@ jobs:
           -F "path=$DEST_NOTEBOOK_PATH" \
           -F "format=SOURCE" \
           -F "language=PYTHON" \
+          -F "overwrite=true" \
           -F "content=@exported_notebook.py" \
           "$DEST_HOST/api/2.0/workspace/import"
 
