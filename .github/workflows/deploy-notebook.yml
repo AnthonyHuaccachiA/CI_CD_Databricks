@@ -32,7 +32,7 @@ jobs:
       run: |
         DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
         DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
-        DEST_NOTEBOOK_PATH="http://workspace/Users/instructor_datasmartada_outlook.com#ext#@instructordatasmartadaoutlo.onmicrosoft.com/ruta"  # Cambia esto
+        DEST_NOTEBOOK_PATH="/Workspace/Users/instructor_datasmartada_outlook.com#ext#@instructordatasmartadaoutlo.onmicrosoft.com/ruta"  # Cambia esto
 
         echo "Importando notebook al workspace de destino..."
         curl -X POST \
