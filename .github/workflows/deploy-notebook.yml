@@ -14,7 +14,7 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Install jq
-      run: sudo apt-get install jq
+      run: sudo apt-get install -y jq
 
     - name: Export Notebook from Source Workspace
       run: |
@@ -23,10 +23,14 @@ jobs:
         NOTEBOOK_PATH="/Workspace/Users/instructor_datasmartada@outlook.com/source/mount_adls_storage"
 
         echo "Exportando notebook desde el workspace de origen..."
-        curl -X GET \
+        curl -s -X GET \
           -H "Authorization: Bearer $ORIGIN_TOKEN" \
           "$ORIGIN_HOST/api/2.0/workspace/export?path=$NOTEBOOK_PATH&format=SOURCE" \
-          --output exported_notebook.py
+          > tmp_export.json
+
+        echo "Decodificando base64..."
+        jq -r .content tmp_export.json | base64 --decode > exported_notebook.py
+        rm tmp_export.json
 
     - name: Create destination directory if needed
       run: |
@@ -35,10 +39,10 @@ jobs:
         DEST_FOLDER_PATH="/py"
 
         echo "Creando carpeta de destino si no existe..."
-        curl -X POST \
+        curl -s -X POST \
           -H "Authorization: Bearer $DEST_TOKEN" \
           -H "Content-Type: application/json" \
-          -d "{\"path\": \"$DEST_FOLDER_PATH\", \"object_type\": \"DIRECTORY\"}" \
+          -d "{\"path\": \"$DEST_FOLDER_PATH\"}" \
           "$DEST_HOST/api/2.0/workspace/mkdirs"
 
     - name: Import Notebook to Destination Workspace
@@ -47,15 +51,20 @@ jobs:
         DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
         DEST_NOTEBOOK_PATH="/py/mount"
 
+        echo "Codificando contenido para importación..."
+        CONTENT_BASE64=$(base64 -w 0 exported_notebook.py)
+
         echo "Importando notebook al workspace de destino..."
-        curl -X POST \
+        curl -s -X POST \
           -H "Authorization: Bearer $DEST_TOKEN" \
-          -H "Content-Type: multipart/form-data" \
-          -F "path=$DEST_NOTEBOOK_PATH" \
-          -F "format=SOURCE" \
-          -F "language=PYTHON" \
-          -F "overwrite=true" \
-          -F "content=@exported_notebook.py" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"path\": \"$DEST_NOTEBOOK_PATH\",
+            \"format\": \"SOURCE\",
+            \"language\": \"PYTHON\",
+            \"content\": \"$CONTENT_BASE64\",
+            \"overwrite\": true
+          }" \
           "$DEST_HOST/api/2.0/workspace/import"
 
     - name: Clean up
