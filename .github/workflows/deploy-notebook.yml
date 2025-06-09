@@ -20,7 +20,7 @@ jobs:
       run: |
         ORIGIN_HOST=${{ secrets.DATABRICKS_ORIGIN_HOST }}
         ORIGIN_TOKEN=${{ secrets.DATABRICKS_ORIGIN_TOKEN }}
-        NOTEBOOK_PATH="/Workspace/Users/instructor_datasmartada_outlook.com/mount_adls_storage"  # Cambia esto
+        NOTEBOOK_PATH="/Workspace/Users/instructor_datasmartada_outlook.com#ext#@instructordatasmartadaoutlo.onmicrosoft.com/mount_adls_storage"  # Cambia esto si tu ruta de origen es diferente
 
         echo "Exportando notebook desde el workspace de origen..."
         curl -X GET \
@@ -28,11 +28,24 @@ jobs:
           "$ORIGIN_HOST/api/2.0/workspace/export?path=$NOTEBOOK_PATH&format=SOURCE" \
           --output exported_notebook.py
 
+    - name: Create destination directory if needed
+      run: |
+        DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
+        DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
+        DEST_FOLDER_PATH="/Users/instructor_datasmartada_outlook.com#ext#@instructordatasmartadaoutlo.onmicrosoft.com/ruta"
+
+        echo "Creando carpeta de destino si no existe..."
+        curl -X POST \
+          -H "Authorization: Bearer $DEST_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "{\"path\": \"$DEST_FOLDER_PATH\", \"object_type\": \"DIRECTORY\"}" \
+          "$DEST_HOST/api/2.0/workspace/mkdirs"
+
     - name: Import Notebook to Destination Workspace
       run: |
         DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
         DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
-        DEST_NOTEBOOK_PATH="/Workspace/Users/instructor_datasmartada_outlook.com/ruta"  # Cambia esto
+        DEST_NOTEBOOK_PATH="/Users/instructor_datasmartada_outlook.com/ruta/mount_adls_storage"  # Notebook destino con nombre
 
         echo "Importando notebook al workspace de destino..."
         curl -X POST \
