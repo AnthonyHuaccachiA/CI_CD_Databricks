@@ -20,7 +20,7 @@ jobs:
       run: |
         ORIGIN_HOST=${{ secrets.DATABRICKS_ORIGIN_HOST }}
         ORIGIN_TOKEN=${{ secrets.DATABRICKS_ORIGIN_TOKEN }}
-        NOTEBOOK_PATH="/Workspace/Users/instructor_datasmartada@outlook.com/source/main"
+        NOTEBOOK_PATH="/Workspace/Users/instructor_datasmartada@outlook.com/source/mount_adls_storage"
 
         echo "Exportando notebook desde el workspace de origen..."
         curl -X GET \
