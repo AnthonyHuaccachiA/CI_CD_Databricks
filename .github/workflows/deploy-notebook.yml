@@ -45,7 +45,7 @@ jobs:
       run: |
         DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
         DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
-        DEST_NOTEBOOK_PATH="/Users/instructor_datasmartada_outlook.com/ruta/mount_adls_storage"  # Notebook destino con nombre
+        DEST_NOTEBOOK_PATH="/Users/instructor_datasmartada_outlook.com#ext#@instructordatasmartadaoutlo.onmicrosoft.com/ruta"  # Notebook destino con nombre
 
         echo "Importando notebook al workspace de destino..."
         curl -X POST \
