@@ -1,0 +1,51 @@
+name: Dynamic Databricks Notebook Deploy
+
+on:
+  push:
+    branches:
+      - main  # o la rama que uses
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Install jq
+      run: sudo apt-get install jq
+
+    - name: Export Notebook from Source Workspace
+      run: |
+        ORIGIN_HOST=${{ secrets.DATABRICKS_ORIGIN_HOST }}
+        ORIGIN_TOKEN=${{ secrets.DATABRICKS_ORIGIN_TOKEN }}
+        NOTEBOOK_PATH="/Users/my_user/my_notebook"  # Cambia esto
+
+        echo "Exportando notebook desde el workspace de origen..."
+        curl -X GET \
+          -H "Authorization: Bearer $ORIGIN_TOKEN" \
+          "$ORIGIN_HOST/api/2.0/workspace/export?path=$NOTEBOOK_PATH&format=SOURCE" \
+          --output exported_notebook.py
+
+    - name: Import Notebook to Destination Workspace
+      run: |
+        DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
+        DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
+        DEST_NOTEBOOK_PATH="/Users/my_user/my_notebook"  # Cambia esto
+
+        echo "Importando notebook al workspace de destino..."
+        curl -X POST \
+          -H "Authorization: Bearer $DEST_TOKEN" \
+          -H "Content-Type: multipart/form-data" \
+          -F "path=$DEST_NOTEBOOK_PATH" \
+          -F "format=SOURCE" \
+          -F "language=PYTHON" \
+          -F "content=@exported_notebook.py" \
+          "$DEST_HOST/api/2.0/workspace/import"
+
+    - name: Clean up
+      run: rm -f exported_notebook.py
+
+    - name: Done
+      run: echo "Deploy completed successfully!"
