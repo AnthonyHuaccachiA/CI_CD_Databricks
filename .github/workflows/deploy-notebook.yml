@@ -13,62 +13,58 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v3
 
-    - name: Install jq
-      run: sudo apt-get install -y jq
+    - name: Install tools
+      run: sudo apt-get install -y jq curl
 
-    - name: Export Notebook from Source Workspace
+    - name: Export Notebooks from Source Workspace
       run: |
         ORIGIN_HOST=${{ secrets.DATABRICKS_ORIGIN_HOST }}
         ORIGIN_TOKEN=${{ secrets.DATABRICKS_ORIGIN_TOKEN }}
-        NOTEBOOK_PATH="/Workspace/Users/instructor_datasmartada@outlook.com/source/mount_adls_storage"
+        NOTEBOOK_BASE_PATH="/Workspace/Users/instructor_datasmartada@outlook.com/source"
+        NOTEBOOKS=("mount_adls_storage" "mount_adls_storage_v1")  # Agrega aquí más notebooks si necesitas
 
-        echo "Exportando notebook desde el workspace de origen..."
-        curl -s -X GET \
-          -H "Authorization: Bearer $ORIGIN_TOKEN" \
-          "$ORIGIN_HOST/api/2.0/workspace/export?path=$NOTEBOOK_PATH&format=SOURCE" \
-          > tmp_export.json
+        mkdir -p notebooks_to_deploy
 
-        echo "Decodificando base64..."
-        jq -r .content tmp_export.json | base64 --decode > exported_notebook.py
-        rm tmp_export.json
+        for nb in "${NOTEBOOKS[@]}"; do
+          echo "Exportando $nb..."
+          curl -s -X GET \
+            -H "Authorization: Bearer $ORIGIN_TOKEN" \
+            "$ORIGIN_HOST/api/2.0/workspace/export?path=$NOTEBOOK_BASE_PATH/$nb&format=SOURCE" \
+            --output notebooks_to_deploy/$nb.py
+        done
 
-    - name: Create destination directory if needed
+    - name: Deploy all notebooks to Destination Workspace
       run: |
         DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
         DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
-        DEST_FOLDER_PATH="/py"
+        DEST_BASE_PATH="/py"
 
-        echo "Creando carpeta de destino si no existe..."
-        curl -s -X POST \
-          -H "Authorization: Bearer $DEST_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d "{\"path\": \"$DEST_FOLDER_PATH\"}" \
-          "$DEST_HOST/api/2.0/workspace/mkdirs"
+        for file in notebooks_to_deploy/*.py; do
+          filename=$(basename "$file" .py)
+          dest_folder="$DEST_BASE_PATH"  # Puedes ajustar esto si quieres subcarpetas
+          dest_path="$dest_folder/$filename"
 
-    - name: Import Notebook to Destination Workspace
-      run: |
-        DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
-        DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
-        DEST_NOTEBOOK_PATH="/py/mount"
+          echo "Creando carpeta de destino si no existe: $dest_folder"
+          curl -s -X POST \
+            -H "Authorization: Bearer $DEST_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"path\": \"$dest_folder\"}" \
+            "$DEST_HOST/api/2.0/workspace/mkdirs"
 
-        echo "Codificando contenido para importación..."
-        CONTENT_BASE64=$(base64 -w 0 exported_notebook.py)
-
-        echo "Importando notebook al workspace de destino..."
-        curl -s -X POST \
-          -H "Authorization: Bearer $DEST_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d "{
-            \"path\": \"$DEST_NOTEBOOK_PATH\",
-            \"format\": \"SOURCE\",
-            \"language\": \"PYTHON\",
-            \"content\": \"$CONTENT_BASE64\",
-            \"overwrite\": true
-          }" \
-          "$DEST_HOST/api/2.0/workspace/import"
+          echo "Importando notebook: $file → $dest_path"
+          curl -s -X POST \
+            -H "Authorization: Bearer $DEST_TOKEN" \
+            -H "Content-Type: multipart/form-data" \
+            -F "path=$dest_path" \
+            -F "format=SOURCE" \
+            -F "language=PYTHON" \
+            -F "overwrite=true" \
+            -F "content=@$file" \
+            "$DEST_HOST/api/2.0/workspace/import"
+        done
 
     - name: Clean up
-      run: rm -f exported_notebook.py
+      run: rm -rf notebooks_to_deploy
 
     - name: Done
-      run: echo "Deploy completed successfully!"
+      run: echo "All notebooks deployed successfully!"
