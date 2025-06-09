@@ -32,7 +32,7 @@ jobs:
       run: |
         DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
         DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
-        DEST_FOLDER_PATH="/Users/instructor_datasmartada_outlook.com#ext#@instructordatasmartadaoutlo.onmicrosoft.com/ruta_adls"
+        DEST_FOLDER_PATH="/Workspace/desa/py"
 
         echo "Creando carpeta de destino si no existe..."
         curl -X POST \
@@ -45,7 +45,7 @@ jobs:
       run: |
         DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
         DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
-        DEST_NOTEBOOK_PATH="/Users/instructor_datasmartada_outlook.com#ext#@instructordatasmartadaoutlo.onmicrosoft.com/ruta_adls/mount"
+        DEST_NOTEBOOK_PATH="/Workspace/desa/mount/mount"
 
         echo "Importando notebook al workspace de destino..."
         curl -X POST \
