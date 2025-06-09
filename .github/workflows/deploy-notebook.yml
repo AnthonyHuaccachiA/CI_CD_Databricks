@@ -13,45 +13,44 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v3
 
-    - name: Install tools
-      run: sudo apt-get install -y jq curl
+    - name: Install jq & curl
+      run: sudo apt-get update && sudo apt-get install -y jq curl
 
-    - name: Export Notebooks from Source Workspace
+    - name: Export multiple notebooks (raw)
       run: |
         ORIGIN_HOST=${{ secrets.DATABRICKS_ORIGIN_HOST }}
         ORIGIN_TOKEN=${{ secrets.DATABRICKS_ORIGIN_TOKEN }}
-        NOTEBOOK_BASE_PATH="/Workspace/Users/instructor_datasmartada@outlook.com/source"
-        NOTEBOOKS=("mount_adls_storage" "mount_adls_storage_v1")  # Agrega aquí más notebooks si necesitas
+        NOTEBOOK_BASE="/Workspace/Users/instructor_datasmartada@outlook.com/source"
+        NOTEBOOKS=("mount_adls_storage" "mount_adls_storage_v1")  # Agrega más según necesites
 
         mkdir -p notebooks_to_deploy
 
         for nb in "${NOTEBOOKS[@]}"; do
-          echo "Exportando $nb..."
+          echo "Exportando $nb en modo raw..."
           curl -s -X GET \
             -H "Authorization: Bearer $ORIGIN_TOKEN" \
-            "$ORIGIN_HOST/api/2.0/workspace/export?path=$NOTEBOOK_BASE_PATH/$nb&format=SOURCE" \
-            --output notebooks_to_deploy/$nb.py
+            "$ORIGIN_HOST/api/2.0/workspace/export?path=$NOTEBOOK_BASE/$nb&format=SOURCE&direct_download=true" \
+            --output "notebooks_to_deploy/$nb.py"
         done
 
-    - name: Deploy all notebooks to Destination Workspace
+    - name: Deploy notebooks to Destination Workspace
       run: |
         DEST_HOST=${{ secrets.DATABRICKS_DEST_HOST }}
         DEST_TOKEN=${{ secrets.DATABRICKS_DEST_TOKEN }}
-        DEST_BASE_PATH="/py"
+        DEST_BASE="/py"
 
         for file in notebooks_to_deploy/*.py; do
-          filename=$(basename "$file" .py)
-          dest_folder="$DEST_BASE_PATH"  # Puedes ajustar esto si quieres subcarpetas
-          dest_path="$dest_folder/$filename"
+          name=$(basename "$file" .py)
+          dest_path="$DEST_BASE/$name"
 
-          echo "Creando carpeta de destino si no existe: $dest_folder"
+          echo "Creando carpeta $DEST_BASE si no existe..."
           curl -s -X POST \
             -H "Authorization: Bearer $DEST_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"path\": \"$dest_folder\"}" \
+            -d "{\"path\":\"$DEST_BASE\"}" \
             "$DEST_HOST/api/2.0/workspace/mkdirs"
 
-          echo "Importando notebook: $file → $dest_path"
+          echo "Importando $file → $dest_path"
           curl -s -X POST \
             -H "Authorization: Bearer $DEST_TOKEN" \
             -H "Content-Type: multipart/form-data" \
@@ -67,4 +66,4 @@ jobs:
       run: rm -rf notebooks_to_deploy
 
     - name: Done
-      run: echo "All notebooks deployed successfully!"
+      run: echo "All notebooks deployed with raw content!"
